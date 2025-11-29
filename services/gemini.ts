@@ -5,13 +5,15 @@ import { Attachment } from "../types";
 let chatSession: Chat | null = null;
 
 export const initializeChatSession = () => {
+  // Access the API key injected by Vite during build time from Netlify Env Vars
   const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    throw new Error("API Key not found in environment variables");
+    console.error("API_KEY is missing. Please set it in Netlify Environment Variables.");
+    throw new Error("API Key is missing");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   const config = {
     systemInstruction: SYSTEM_INSTRUCTION,
@@ -32,7 +34,12 @@ export const initializeChatSession = () => {
 
 export const sendMessageToGemini = async (message: string, attachments: Attachment[] = []): Promise<string> => {
   if (!chatSession) {
-    initializeChatSession();
+    try {
+      initializeChatSession();
+    } catch (e) {
+      console.error("Failed to initialize chat session", e);
+      return "Error: Failed to initialize chat session. API Key might be missing.";
+    }
   }
 
   if (!chatSession) {
@@ -67,6 +74,7 @@ export const sendMessageToGemini = async (message: string, attachments: Attachme
     }
 
     const response = await chatSession.sendMessage(messagePayload);
+    // Correct way to access text property
     return response.text || "I'm sorry, I couldn't generate a response.";
   } catch (error) {
     console.error("Error sending message to Gemini:", error);
